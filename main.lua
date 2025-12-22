@@ -353,7 +353,12 @@ local function AddScriptButton(page, name, line1, line2, btnText, callback)
 	Desc2.BackgroundTransparency = 1
 	Desc2.Font = Enum.Font.GothamMedium
 	Desc2.Text = line2
-	Desc2.TextColor3 = Color3.fromRGB(200, 60, 60)
+    -- Verificação se o script está patched para mudar cor
+    if string.find(string.upper(line2), "PATCHED") then
+        Desc2.TextColor3 = Color3.fromRGB(255, 60, 60)
+    else
+	    Desc2.TextColor3 = Color3.fromRGB(200, 60, 60)
+    end
 	Desc2.TextSize = 10
 	Desc2.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -382,8 +387,8 @@ local CreditsTab = CreateTab("CREDITS", 101)
 
 -- [[ SCRIPTS PROJECT SLAYERS ]] --
 AddScriptButton(ProjectSlayers, "CLOUD HUB", "Auto farm everything", "Needs Key", "Execute", function() ExecuteScript(_U.CLOUD) end)
-AddScriptButton(ProjectSlayers, "FIRE HUB", "Auto farm everything", "Needs Key", "Execute", function() ExecuteScript(_U.FIRE) end)
 AddScriptButton(ProjectSlayers, "FROSTIES HUB", "Auto farm everything", "Needs Key", "Execute", function() ExecuteScript(_U.FROST) end)
+AddScriptButton(ProjectSlayers, "FIRE HUB", "Auto farm everything", "PATCHED", "Execute", function() ExecuteScript(_U.FIRE) end)
 
 -- [[ SCRIPTS UNIVERSAL ]] --
 AddScriptButton(Universal, "INFINITE YIELD", "Universal script commands", "", "Execute", function() ExecuteScript(_U.IY) end)
@@ -891,7 +896,7 @@ AddScriptButton(WestBound, "DIABLO HUB", "Auto farm money", "", "Execute", funct
 end)
 
 -- [[ DISCORD ]] --
-AddScriptButton(DiscordTab, "TRXSH COMMUNITY", "Join for latest updates", "", "Copy", function() 
+AddScriptButton(DiscordTab, "TRXSH HUB COMMUNITY", "Join for latest updates", "", "Copy", function() 
 	if setclipboard then setclipboard(Settings.DiscordLink) end 
 end)
 
@@ -913,24 +918,23 @@ BindBtn.MouseButton1Click:Connect(function()
 	BindBtn.Text = "..." 
 end)
 
--- [[ SISTEMA DE PROTEÇÃO POR BYTECODE (CAMUFLAGEM) ]] --
+-- [[ SISTEMA DE PROTEÇÃO POR BYTECODE (REVISADO) ]] --
 local function Decode(t)
     local s = ""
     for _, b in ipairs(t) do s = s .. string.char(b) end
     return s
 end
 
--- Chaves e IDs codificados para ninguém conseguir ler o texto original no GitHub
+-- CODIFICAÇÃO PRECISA DAS KEYS E HWID
 local _V1 = {55,98,56,48,54,102,57,48,45,54,100,55,101,45,52,101,97,53,45,57,51,57,101,45,98,101,54,57,56,97,97,54,101,54,50,57} -- Key 24h
-local _V2 = {104,101,110,114,105,113,115,122,55} -- Key Admin
-local _V3 = {52,51,65,57,54,51,54,57,45,66,52,54,65,45,52,65,51,70,45,65,49,55,49,45,52,68,67,66,57,65,50,55,70,54,49,53} -- Seu ID
+local _V2 = {104,101,110,114,105,113,115,122,55} -- Key Admin: henriqsz7
+local _V3 = {52,51,65,57,54,51,54,57,45,66,52,54,65,45,52,52,65,51,70,45,65,49,55,49,45,52,68,67,66,57,65,50,55,70,54,49,53} -- Seu ID: 43A96369-B46A-4A3F-A171-4DCB9A27F615
 
 AuthBtn.MouseButton1Click:Connect(function()
     local input = KeyInput.Text
     local currentHardware = RbxAnalyticsService:GetClientId()
     local authenticated = false
 
-    -- Reconstrói as chaves apenas na memória
     local k_std = Decode(_V1)
     local k_adm = Decode(_V2)
     local h_adm = Decode(_V3)
@@ -971,8 +975,8 @@ local function _D()
     local h = RbxAnalyticsService:GetClientId()
     local a = Decode(_V3)
     print("------------------------------------------")
-    print("CLIENT_ID: " .. h)
-    print("STATUS: " .. (h == a and "VERIFIED_OWNER" or "GUEST_USER"))
+    print("DEVICE: " .. h)
+    print("HWID_MATCH: " .. tostring(h == a))
     print("------------------------------------------")
 end
 _D()
@@ -993,4 +997,4 @@ UserInputService.InputBegan:Connect(function(input)
 	end
 end)
 
-print("TRXSH HUB V3.1.0 - SECURITY ENHANCED")
+print("TRXSH HUB V3.1.1 - FIXED ADMIN SYSTEM")
