@@ -11,7 +11,6 @@ local RunService = game:GetService("RunService")
 local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
 
 -- [[ IDENTIFICADOR ÚNICO DA MÁQUINA (HWID) ]] --
--- Esse ID é único para você.
 local MyID = RbxAnalyticsService:GetClientId() 
 
 -- [[ URL DATABASE - SCRIPTS EXTERNOS ]] --
@@ -914,30 +913,36 @@ BindBtn.MouseButton1Click:Connect(function()
 	BindBtn.Text = "..." 
 end)
 
--- [[ SISTEMA DE LOGIN COM WHITELIST HWID ]] --
-local _K1 = "7b806f90-6d7e-4ea5-939e-be698aa6e629" -- Key Comum (24h)
-local _KA = "henriqsz7" -- Sua Key Mestra
+-- [[ SISTEMA DE PROTEÇÃO POR BYTECODE (CAMUFLAGEM) ]] --
+local function Decode(t)
+    local s = ""
+    for _, b in ipairs(t) do s = s .. string.char(b) end
+    return s
+end
 
--- VOCÊ PRECISA COLOCAR O SEU ID AQUI PARA A KEY MESTRA FUNCIONAR
--- Execute o script uma vez e veja o seu ID no Console do Roblox (F9)
-local MyPrivateID = "COLOQUE_SEU_ID_AQUI" 
+-- Chaves e IDs codificados para ninguém conseguir ler o texto original no GitHub
+local _V1 = {55,98,56,48,54,102,57,48,45,54,100,55,101,45,52,101,97,53,45,57,51,57,101,45,98,101,54,57,56,97,97,54,101,54,50,57} -- Key 24h
+local _V2 = {104,101,110,114,105,113,115,122,55} -- Key Admin
+local _V3 = {52,51,65,57,54,51,54,57,45,66,52,54,65,45,52,65,51,70,45,65,49,55,49,45,52,68,67,66,57,65,50,55,70,54,49,53} -- Seu ID
 
 AuthBtn.MouseButton1Click:Connect(function()
     local input = KeyInput.Text
     local currentHardware = RbxAnalyticsService:GetClientId()
-    
     local authenticated = false
 
-    -- 1. Verifica se é a sua Key Mestra e se é o SEU computador
-    if input == _KA then
-        if currentHardware == MyPrivateID then
+    -- Reconstrói as chaves apenas na memória
+    local k_std = Decode(_V1)
+    local k_adm = Decode(_V2)
+    local h_adm = Decode(_V3)
+
+    if input == k_adm then
+        if currentHardware == h_adm then
             authenticated = true
         else
             KeyInput.Text = ""
             KeyInput.PlaceholderText = "UNAUTHORIZED DEVICE!"
         end
-    -- 2. Verifica se é a Key comum de 24h
-    elseif input == _K1 then
+    elseif input == k_std then
         authenticated = true
     end
 
@@ -949,7 +954,6 @@ AuthBtn.MouseButton1Click:Connect(function()
         MainHub.Size = UDim2.new(0, 0, 0, 0)
         SmoothTween(MainHub, 0.5, {Size = UDim2.new(0, 700, 0, 450)})
     else
-        -- Efeito de Erro
         if KeyInput.PlaceholderText ~= "UNAUTHORIZED DEVICE!" then
             KeyInput.Text = ""
             KeyInput.PlaceholderText = "WRONG KEY!"
@@ -962,11 +966,16 @@ AuthBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- COMANDO PARA VOCÊ DESCOBRIR SEU ID (Aparece no F9)
-print("------------------------------------------")
-print("SEU ID ÚNICO: " .. RbxAnalyticsService:GetClientId())
-print("COPIE O ID ACIMA E COLOQUE NA VARIAVEL 'MyPrivateID' NO SCRIPT")
-print("------------------------------------------")
+-- DEBUG OCULTO
+local function _D()
+    local h = RbxAnalyticsService:GetClientId()
+    local a = Decode(_V3)
+    print("------------------------------------------")
+    print("CLIENT_ID: " .. h)
+    print("STATUS: " .. (h == a and "VERIFIED_OWNER" or "GUEST_USER"))
+    print("------------------------------------------")
+end
+_D()
 
 GetKeyBtn.MouseButton1Click:Connect(function()
 	if setclipboard then setclipboard("https://work.ink/24Qe/key") end
@@ -984,4 +993,4 @@ UserInputService.InputBegan:Connect(function(input)
 	end
 end)
 
-print("TRXSH HUB V3.1.0 - WHITELIST SYSTEM ACTIVE")
+print("TRXSH HUB V3.1.0 - SECURITY ENHANCED")
