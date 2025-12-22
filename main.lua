@@ -17,21 +17,21 @@ local function _X(str)
     return newStr
 end
 
--- [[ SECURE LOAD FUNCTION ]] --
-local function SecureLoad(rawUrl)
-    local success, result = pcall(function()
-        return game:HttpGet(rawUrl)
+-- [[ SECURE EXECUTION ENGINE ]] --
+local function SecureLoad(url)
+    local success, content = pcall(function()
+        return game:HttpGet(url .. "?t=" .. tick()) -- Bypass cache
     end)
     
-    if success then
-        local func, err = loadstring(result)
+    if success and content then
+        local func, err = loadstring(content)
         if func then
-            func()
+            task.spawn(func)
         else
-            warn("Error parsing script: " .. tostring(err))
+            warn("TRXSH HUB Error: Script execution failed -> " .. tostring(err))
         end
     else
-        warn("Error downloading script: " .. tostring(result))
+        warn("TRXSH HUB Error: Could not reach script server.")
     end
 end
 
@@ -44,10 +44,8 @@ local _U = {
     IY = _X("\x68\x74\x74\x70\x73\x3a\x2f\x2f\x72\x61\x77\x2e\x67\x69\x74\x68\x75\x62\x75\x73\x65\x72\x63\x6f\x6e\x74\x65\x6e\x74\x2e\x63\x6f\x6d\x2f\x45\x64\x67\x65\x49\x59\x2f\x69\x6e\x66\x69\x6e\x69\x74\x65\x79\x69\x65\x6c\x64\x2f\x6d\x61\x73\x74\x65\x72\x2f\x73\x6f\x75\x72\x63\x65")
 }
 
--- DETERMINA O PARENT
 local TargetParent = (gethui and gethui()) or (CoreGui:FindFirstChild("RobloxGui") and CoreGui.RobloxGui) or PlayerGui
 
--- LIMPEZA
 if TargetParent:FindFirstChild("TRXSH_HUB_V3_ULTIMATE") then
 	TargetParent:FindFirstChild("TRXSH_HUB_V3_ULTIMATE"):Destroy()
 end
@@ -58,7 +56,6 @@ TRXSH_HUB.Parent = TargetParent
 TRXSH_HUB.ResetOnSpawn = false
 TRXSH_HUB.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- [[ CONFIGURAÇÕES ]] --
 local Settings = {
 	AutoExecute = false,
 	HideKey = Enum.KeyCode.LeftControl,
@@ -68,7 +65,7 @@ local Settings = {
 	SecondaryColor = Color3.fromRGB(15, 15, 18)
 }
 
--- [[ FUNÇÕES DE ESTÉTICA ]] --
+-- [[ FUNÇÕES DE INTERFACE DO CÓDIGO PRINCIPAL ]] --
 local function SmoothTween(obj, time, prop)
 	local info = TweenInfo.new(time, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 	local tween = TweenService:Create(obj, info, prop)
@@ -108,7 +105,7 @@ local function MakeDraggable(frame)
 	UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
 end
 
--- [[ TELA DE LOGIN ]] --
+-- [[ INTERFACE COMPLETA (LOGIN) ]] --
 local KeyFrame = Instance.new("Frame")
 KeyFrame.Name = "KeyFrame"
 KeyFrame.Parent = TRXSH_HUB
@@ -178,7 +175,7 @@ ApplyHover(GetKeyBtn, Color3.fromRGB(25, 25, 30), Color3.fromRGB(35, 35, 40))
 
 MakeDraggable(KeyFrame)
 
--- [[ PAINEL PRINCIPAL ]] --
+-- [[ PAINEL PRINCIPAL (INTERFACE GIGANTE) ]] --
 local MainHub = Instance.new("Frame")
 MainHub.Name = "MainHub"
 MainHub.Parent = TRXSH_HUB
@@ -211,31 +208,6 @@ CloseMain.ZIndex = 10
 ApplyCloseHover(CloseMain)
 CloseMain.MouseButton1Click:Connect(function() TRXSH_HUB:Destroy() end)
 
--- PERFIL DO USUÁRIO
-local UserInfo = Instance.new("Frame")
-UserInfo.Parent = SideMenu
-UserInfo.Size = UDim2.new(1, 0, 0, 60)
-UserInfo.Position = UDim2.new(0, 0, 1, -60)
-UserInfo.BackgroundTransparency = 1
-
-local UserImg = Instance.new("ImageLabel")
-UserImg.Parent = UserInfo
-UserImg.Size = UDim2.new(0, 35, 0, 35)
-UserImg.Position = UDim2.new(0, 15, 0, 12)
-UserImg.Image = "rbxthumb://type=AvatarHeadShot&id="..Player.UserId.."&w=150&h=150"
-Instance.new("UICorner", UserImg).CornerRadius = UDim.new(1, 0)
-
-local UserN = Instance.new("TextLabel")
-UserN.Parent = UserInfo
-UserN.Position = UDim2.new(0, 60, 0, 12)
-UserN.Size = UDim2.new(1, -70, 1, -24)
-UserN.BackgroundTransparency = 1
-UserN.Font = Enum.Font.GothamBold
-UserN.Text = Player.DisplayName
-UserN.TextColor3 = Color3.fromRGB(200, 200, 200)
-UserN.TextSize = 11
-UserN.TextXAlignment = Enum.TextXAlignment.Left
-
 local Logo = Instance.new("TextLabel")
 Logo.Parent = SideMenu
 Logo.Size = UDim2.new(1, 0, 0, 70)
@@ -260,18 +232,6 @@ ContentArea.Parent = MainHub
 ContentArea.Position = UDim2.new(0, 195, 0, 45)
 ContentArea.Size = UDim2.new(1, -210, 1, -60)
 ContentArea.BackgroundTransparency = 1
-
-local BigTitle = Instance.new("TextLabel")
-BigTitle.Name = "BigTitle"
-BigTitle.Parent = ContentArea
-BigTitle.Size = UDim2.new(1, 0, 1, 0)
-BigTitle.BackgroundTransparency = 1
-BigTitle.Font = Enum.Font.Michroma
-BigTitle.Text = "TRXSH"
-BigTitle.TextColor3 = Color3.fromRGB(30, 30, 35)
-BigTitle.TextSize = 90
-BigTitle.TextTransparency = 0.5
-BigTitle.ZIndex = 0
 
 MakeDraggable(MainHub)
 
@@ -306,7 +266,6 @@ local function CreateTab(name, layoutOrder)
 	ApplyHover(TabBtn, Color3.fromRGB(20, 20, 24), Color3.fromRGB(30, 30, 35), TS)
 
 	TabBtn.MouseButton1Click:Connect(function()
-		BigTitle.Visible = false
 		for _, p in pairs(ContentArea:GetChildren()) do if p:IsA("ScrollingFrame") then p.Visible = false end end
 		for _, b in pairs(TabList:GetChildren()) do 
 			if b:IsA("TextButton") then 
@@ -317,25 +276,6 @@ local function CreateTab(name, layoutOrder)
 		SmoothTween(TabBtn, 0.3, {BackgroundColor3 = Settings.AccentColor, TextColor3 = Color3.fromRGB(255, 255, 255)})
 	end)
 	return Page
-end
-
--- [[ FUNÇÕES DE COMPONENTES ]] --
-local function AddBasicButton(page, name, callback)
-	local Btn = Instance.new("TextButton")
-	Btn.Parent = page
-	Btn.Size = UDim2.new(0.95, 0, 0, 42)
-	Btn.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-	Btn.Font = Enum.Font.GothamBold
-	Btn.Text = name
-	Btn.TextColor3 = Color3.fromRGB(230, 230, 230)
-	Btn.TextSize = 13
-	Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
-	local BS = Instance.new("UIStroke", Btn)
-	BS.Color = Color3.fromRGB(60, 60, 60)
-	BS.Transparency = 0.7
-	ApplyHover(Btn, Color3.fromRGB(18, 18, 22), Color3.fromRGB(25, 25, 30), BS)
-	Btn.MouseButton1Click:Connect(callback)
-	return Btn
 end
 
 local function AddScriptButton(page, name, line1, line2, btnText, callback)
@@ -393,101 +333,50 @@ local function AddScriptButton(page, name, line1, line2, btnText, callback)
 		ExecBtn.TextSize = 12
 		Instance.new("UICorner", ExecBtn).CornerRadius = UDim.new(0, 4)
 		ExecBtn.MouseButton1Click:Connect(callback)
-	else
-		Desc1.Size = UDim2.new(1, -20, 0, 0)
-		Desc1.AutomaticSize = Enum.AutomaticSize.Y
-		Desc1.TextWrapped = true
-		Container.AutomaticSize = Enum.AutomaticSize.Y
-		Container.Size = UDim2.new(0.95, 0, 0, 60)
 	end
 end
 
--- [[ CRIAÇÃO DAS ABAS (ORDEM ATUALIZADA) ]] --
+-- [[ ORGANIZAÇÃO DAS ABAS (NOVO PEDIDO) ]] --
 local ProjectSlayers = CreateTab("PROJECT SLAYERS", 1)
 local WestBound = CreateTab("WESTBOUND", 2)
 local Universal = CreateTab("UNIVERSAL", 98)
 local ConfigTab = CreateTab("SETTINGS", 99)
 local DiscordTab = CreateTab("DISCORD", 100)
-local CreditsTab = CreateTab("CREDITS", 101) -- ABA DE CRÉDITOS AGORA EM BAIXO DO DISCORD
+local CreditsTab = CreateTab("CREDITS", 101) -- Credits em baixo do Discord
 
--- [[ CONTEÚDO CREDITS (VERSÃO 3.1.0) ]] --
+-- [[ CONTEÚDO DAS ABAS ]] --
 AddScriptButton(CreditsTab, "DEVELOPER INFORMATION", "Created by: henriqsz7", "Panel: TRXSH HUB", nil, nil)
-AddScriptButton(CreditsTab, "LEGAL NOTICE", "All panel rights are reserved to 'henriqsz7', the creator of the entire panel layout.", "", nil, nil)
-AddScriptButton(CreditsTab, "REMOVAL REQUEST", "If you own any of the scripts and do not want me to distribute them, request removal via my Discord server by sending a DM or opening a ticket.", "", nil, nil)
-AddScriptButton(CreditsTab, "VERSION CONTROL", "Current Version: 3.1.0", "Status: Undetected", nil, nil)
+AddScriptButton(CreditsTab, "VERSION CONTROL", "Current Version: 3.1.0", "Status: Undetected", nil, nil) -- Versão 3.1.0 sem Ultimate
 
--- [[ CONTEÚDO WESTBOUND ]] --
-AddScriptButton(WestBound, "DIABLO HUB", "Auto farm money", "", "Execute", function()
-    -- Link do Diablo Hub pode ser colocado aqui futuramente
-end)
+AddScriptButton(ProjectSlayers, "CLOUD HUB", "Auto farm everything", "Needs Key", "Execute", function() SecureLoad(_U.CLOUD) end)
+AddScriptButton(ProjectSlayers, "FIRE HUB", "Auto farm everything", "Needs Key", "Execute", function() SecureLoad(_U.FIRE) end)
 
--- [[ CONTEÚDO PROJECT SLAYERS ]] --
-AddScriptButton(ProjectSlayers, "CLOUD HUB", "Auto farm everything in the game", "Needs Key", "Execute", function()
-	SecureLoad(_U.CLOUD)
-end)
-AddScriptButton(ProjectSlayers, "FIRE HUB", "Auto farm everything in the game", "Needs Key", "Execute", function()
-	SecureLoad(_U.FIRE)
-end)
-AddScriptButton(ProjectSlayers, "FROSTIES HUB", "Auto farm everything in the game", "Needs Key", "Execute", function()
-	SecureLoad(_U.FROST)
-end)
+AddScriptButton(WestBound, "DIABLO HUB", "Auto farm money", "", "Execute", function() SecureLoad(_U.DIABLO) end)
 
--- [[ CONTEÚDO UNIVERSAL ]] --
-AddScriptButton(Universal, "INFINITE YIELD", "Universal script commands", "", "Execute", function() 
-	SecureLoad(_U.IY)
-end)
+AddScriptButton(Universal, "INFINITE YIELD", "Universal commands", "", "Execute", function() SecureLoad(_U.IY) end) -- Caps lock e link fix
 
--- [[ CONTEÚDO DISCORD ]] --
-AddScriptButton(DiscordTab, "TRXSH HUB COMMUNITY", "Join our discord community to stay up to date with the latest news", "", "Copy", function() 
-	if setclipboard then setclipboard(Settings.DiscordLink) end 
-end)
+AddScriptButton(DiscordTab, "TRXSH COMMUNITY", "Join us for updates", "", "Copy", function() if setclipboard then setclipboard(Settings.DiscordLink) end end)
 
--- [[ CONTEÚDO SETTINGS ]] --
-local AutoExeBtn = AddBasicButton(ConfigTab, "Auto Execute: OFF", function()
-	Settings.AutoExecute = not Settings.AutoExecute
-	AutoExeBtn.Text = "Auto Execute: " .. (Settings.AutoExecute and "ON" or "OFF")
-end)
-
-local BindBtn = AddBasicButton(ConfigTab, "Hide Bind: LeftControl", function() end)
-local listening = false
-
-BindBtn.MouseButton1Click:Connect(function() 
-	listening = true 
-	BindBtn.Text = "..." 
-end)
-
--- [[ LÓGICA DE INPUT ]] --
-UserInputService.InputBegan:Connect(function(input)
-	if listening and input.UserInputType == Enum.UserInputType.Keyboard then
-		Settings.HideKey = input.KeyCode
-		BindBtn.Text = "Hide Bind: "..tostring(input.KeyCode.Name)
-		listening = false
-	elseif input.KeyCode == Settings.HideKey then
-		Settings.IsVisible = not Settings.IsVisible
-		MainHub.Visible = Settings.IsVisible
-	end
-end)
-
--- [[ LOGIN SECURITY LAYER ]] --
+-- [[ AUTH LOGIC ]] --
 local _K1 = _X("\x37\x62\x38\x30\x36\x66\x39\x30\x2d\x36\x64\x37\x65\x2d\x34\x65\x61\x35\x2d\x39\x33\x39\x65\x2d\x62\x65\x36\x39\x38\x61\x61\x36\x65\x36\x32\x39")
 local _KA = _X("\x68\x65\x6e\x72\x69\x71\x73\x7a")
 
 AuthBtn.MouseButton1Click:Connect(function()
 	if KeyInput.Text == _K1 or KeyInput.Text == _KA then
-		SmoothTween(KeyFrame, 0.5, {Position = UDim2.new(0.5, -180, -1, 0)})
-		task.wait(0.5)
 		KeyFrame.Visible = false
 		MainHub.Visible = true
-		MainHub.Size = UDim2.new(0,0,0,0)
-		SmoothTween(MainHub, 0.6, {Size = UDim2.new(0, 700, 0, 450)})
 	else
-		KeyInput.Text = ""
-		KeyInput.PlaceholderText = "WRONG KEY!"
+		KeyInput.PlaceholderText = "INVALID KEY"
 	end
 end)
 
-GetKeyBtn.MouseButton1Click:Connect(function()
-	if setclipboard then setclipboard("https://work.ink/24Qe/key") end
+GetKeyBtn.MouseButton1Click:Connect(function() if setclipboard then setclipboard("https://work.ink/24Qe/key") end end)
+
+-- Toggle Menu
+UserInputService.InputBegan:Connect(function(input)
+	if input.KeyCode == Settings.HideKey then
+		MainHub.Visible = not MainHub.Visible
+	end
 end)
 
 print(_X("\x54\x52\x58\x53\x48\x20\x48\x55\x42\x20\x4c\x4f\x41\x44\x45\x44"))
