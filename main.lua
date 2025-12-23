@@ -11,8 +11,12 @@ local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
 local Lighting = game:GetService("Lighting")
 local Camera = workspace.CurrentCamera
 
--- [[ IDENTIFICADOR PRIVADO ]] --
-local CurrentDeviceID = RbxAnalyticsService:GetClientId() 
+-- [[ PRIVATE IDENTIFIER WITH EXECUTOR FIX ]] --
+local CurrentDeviceID = ""
+pcall(function()
+    CurrentDeviceID = RbxAnalyticsService:GetClientId()
+end)
+
 local ADMIN_HWID = "43A96369-B46A-4A3F-A171-4DCB9A27F615"
 
 -- [[ URL DATABASE ]] --
@@ -45,10 +49,11 @@ local Settings = {
 	AccentColor = Color3.fromRGB(90, 50, 200),
 	SecondaryColor = Color3.fromRGB(15, 15, 18),
     RainbowUI = false,
-    PerformanceMode = false
+    PerformanceMode = false,
+    ShowFps = false
 }
 
--- [[ VARIÁVEIS DE ESTADO ]] --
+-- [[ STATE VARIABLES ]] --
 getgenv().EspNameEnabled = false
 getgenv().EspCorpoEnabled = false
 getgenv().AimbotEnabled = false
@@ -64,7 +69,7 @@ FOVCircle.Filled = false
 FOVCircle.Visible = false
 FOVCircle.Color = Settings.AccentColor
 
--- [[ FUNÇÕES AUXILIARES ]] --
+-- [[ UTILITY FUNCTIONS ]] --
 local function ExecuteScript(url)
     local success, content = pcall(function() return game:HttpGet(url) end)
     if success then
@@ -112,12 +117,11 @@ local function MakeDraggable(frame)
 	UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
 end
 
--- [[ LÓGICA DE ESP OTIMIZADA PARA ZERO LAG ]] --
+-- [[ ESP LOGIC ]] --
 local function UpdateEsp()
     for _, plr in pairs(game.Players:GetPlayers()) do
         if plr ~= Player and plr.Character then
             local char = plr.Character
-            
             local existingName = char:FindFirstChild("TrxshName")
             if getgenv().EspNameEnabled then
                 if not existingName then
@@ -130,7 +134,6 @@ local function UpdateEsp()
                         billboard.Adornee = head
                         billboard.StudsOffset = Vector3.new(0, 3, 0)
                         billboard.Parent = char
-
                         local label = Instance.new("TextLabel")
                         label.BackgroundTransparency = 1
                         label.Size = UDim2.new(1, 0, 1, 0)
@@ -144,7 +147,6 @@ local function UpdateEsp()
             else
                 if existingName then existingName:Destroy() end
             end
-
             local existingBody = char:FindFirstChild("TrxshEspCorpo")
             if getgenv().EspCorpoEnabled then
                 if not existingBody then
@@ -168,7 +170,7 @@ task.spawn(function()
     end
 end)
 
--- [[ SISTEMA DE AIMBOT WESTBOUND FIX ]] --
+-- [[ AIMBOT LOGIC WESTBOUND ]] --
 local function GetClosestPlayer()
     local closest = nil
     local shortestDistance = getgenv().AimbotFOV
@@ -193,13 +195,11 @@ RunService.RenderStepped:Connect(function()
     if getgenv().AimbotEnabled then
         FOVCircle.Visible = true
         FOVCircle.Position = UserInputService:GetMouseLocation()
-        
         if UserInputService:IsKeyDown(getgenv().AimbotKey) then
             local target = GetClosestPlayer()
             if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
                 local targetPart = target.Character.HumanoidRootPart
-                local targetPos = targetPart.Position
-                Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetPos), getgenv().AimbotSmoothing)
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
             end
         end
     else
@@ -337,7 +337,7 @@ ContentArea.BackgroundTransparency = 1
 
 MakeDraggable(MainHub)
 
--- [[ COMPONENTES ]] --
+-- [[ COMPONENTS ]] --
 local function CreateTab(name, layoutOrder)
 	local TabBtn = Instance.new("TextButton")
 	TabBtn.Parent = TabList
@@ -376,28 +376,10 @@ local function CreateTab(name, layoutOrder)
 	return Page
 end
 
-local function AddBasicButton(page, name, callback)
-	local Btn = Instance.new("TextButton")
-	Btn.Parent = page
-	Btn.Size = UDim2.new(0.95, 0, 0, 42)
-	Btn.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-	Btn.Font = Enum.Font.GothamBold
-	Btn.Text = name
-	Btn.TextColor3 = Color3.fromRGB(230, 230, 230)
-	Btn.TextSize = 13
-	Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
-	local BS = Instance.new("UIStroke", Btn)
-	BS.Color = Color3.fromRGB(60, 60, 60)
-	BS.Transparency = 0.7
-	ApplyHover(Btn, Color3.fromRGB(18, 18, 22), Color3.fromRGB(25, 25, 30), BS)
-	Btn.MouseButton1Click:Connect(callback)
-	return Btn
-end
-
-local function AddScriptButton(page, name, line1, line2, btnText, callback, specialLine, descColor)
+local function AddButton(page, name, line1, line2, btnText, callback, specialLine)
 	local Container = Instance.new("Frame")
 	Container.Parent = page
-    local containerHeight = specialLine and 110 or 75
+    local containerHeight = (specialLine and specialLine ~= "") and 110 or 75
 	Container.Size = UDim2.new(0.95, 0, 0, containerHeight)
 	Container.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 	Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 6)
@@ -423,7 +405,7 @@ local function AddScriptButton(page, name, line1, line2, btnText, callback, spec
 	Desc1.BackgroundTransparency = 1
 	Desc1.Font = Enum.Font.Gotham
 	Desc1.Text = line1
-	Desc1.TextColor3 = descColor or Color3.fromRGB(150, 150, 150)
+	Desc1.TextColor3 = (name == "AIMBOT + ESP" and line1 == "Works in almost all games") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
 	Desc1.TextSize = 11
 	Desc1.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -434,16 +416,10 @@ local function AddScriptButton(page, name, line1, line2, btnText, callback, spec
 	Desc2.BackgroundTransparency = 1
 	Desc2.Font = Enum.Font.GothamMedium
 	Desc2.Text = line2
-    Desc2.TextColor3 = (line2 == "PATCHED" or line2 == "Needs Key" or line2 == "Latest Version" or line2 == "OPTIMIZED FOR WESTBOUND" or line2 == "Universal" or line2 == "BY HENRIQSZ7") and Color3.fromRGB(200, 60, 60) or Color3.fromRGB(150, 150, 150)
-    
-    -- Ajuste específico para o texto branco do Universal
-    if name == "AIMBOT + ESP" and line2 == "Universal" then
-        Desc1.TextColor3 = Color3.fromRGB(255, 255, 255)
-    end
-
+    Desc2.TextColor3 = (line2 == "PATCHED" or line2 == "Needs Key" or line2 == "Latest Version" or line2 == "BY HENRIQSZ7" or line2 == "Universal" or line2 == "Admin") and Color3.fromRGB(200, 60, 60) or Color3.fromRGB(150, 150, 150)
 	Desc2.TextXAlignment = Enum.TextXAlignment.Left
-    
-    if specialLine then
+
+    if specialLine and specialLine ~= "" then
         local Desc3 = Instance.new("TextLabel")
         Desc3.Parent = Container
         Desc3.Size = UDim2.new(1, -15, 0, 40)
@@ -457,7 +433,7 @@ local function AddScriptButton(page, name, line1, line2, btnText, callback, spec
         Desc3.TextWrapped = true
     end
 
-	if btnText then
+	if btnText and btnText ~= "" then
 		local ExecBtn = Instance.new("TextButton")
 		ExecBtn.Parent = Container
 		ExecBtn.Size = UDim2.new(0, 85, 0, 32)
@@ -472,22 +448,14 @@ local function AddScriptButton(page, name, line1, line2, btnText, callback, spec
         ES.Color = Color3.fromRGB(255,255,255)
         ES.Transparency = 0.8
 		ExecBtn.MouseButton1Click:Connect(function()
-            if btnText == "Copy Link" then
-                callback()
-                ExecBtn.Text = "COPIED!"
-                ExecBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-                task.wait(2)
-                ExecBtn.Text = "Copy Link"
-                ExecBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            else
-                callback()
-            end
+            callback(ExecBtn)
         end)
         ApplyHover(ExecBtn, Settings.AccentColor, Color3.fromRGB(110, 70, 220), ES)
+        return ExecBtn
 	end
 end
 
--- [[ ABAS ]] --
+-- [[ TABS ]] --
 local ProjectSlayers = CreateTab("PROJECT SLAYERS", 1)
 local WestBound = CreateTab("WESTBOUND", 2)
 local Universal = CreateTab("UNIVERSAL", 98)
@@ -495,58 +463,81 @@ local ConfigTab = CreateTab("SETTINGS", 99)
 local DiscordTab = CreateTab("DISCORD", 100)
 local CreditsTab = CreateTab("CREDITS", 101)
 
--- [[ ABA SLAYERS ]] --
-AddScriptButton(ProjectSlayers, "FROSTIES HUB", "Auto farm everything", "Needs Key", "Execute", function() ExecuteScript(_U.FROST) end)
-AddScriptButton(ProjectSlayers, "CLOUD HUB", "Auto farm everything", "Needs Key", "Execute", function() ExecuteScript(_U.CLOUD) end)
-AddScriptButton(ProjectSlayers, "FIRE HUB", "Auto farm everything", "PATCHED", "Execute", function() ExecuteScript(_U.FIRE) end)
+-- [[ SLAYERS PAGE ]] --
+AddButton(ProjectSlayers, "FROSTIES HUB", "Auto farm everything", "Needs Key", "Execute", function() ExecuteScript(_U.FROST) end)
+AddButton(ProjectSlayers, "CLOUD HUB", "Auto farm everything", "Needs Key", "Execute", function() ExecuteScript(_U.CLOUD) end)
+AddButton(ProjectSlayers, "FIRE HUB", "Auto farm everything", "PATCHED", "Execute", function() ExecuteScript(_U.FIRE) end)
 
--- [[ ABA WESTBOUND ]] --
-AddScriptButton(WestBound, "TRXSH HUB", "Auto farm money", "Latest Version", "Execute", function() ExecuteScript(_U.WEST) end, "YOU NEED TO EXECUTE BEFORE SPAWNING.")
-AddScriptButton(WestBound, "ESP NAME INFO", "See names through walls", "BY HENRIQSZ7", "Execute", function() getgenv().EspNameEnabled = not getgenv().EspNameEnabled end)
-AddScriptButton(WestBound, "ESP CORPO", "Highlight player bodies", "BY HENRIQSZ7", "Execute", function() getgenv().EspCorpoEnabled = not getgenv().EspCorpoEnabled end)
-AddScriptButton(WestBound, "AIMBOT (FIXED)", "Lock-on Body (Key: E)", "BY HENRIQSZ7", "Execute", function() getgenv().AimbotEnabled = not getgenv().AimbotEnabled end)
-
--- [[ ABA UNIVERSAL ]] --
-AddScriptButton(Universal, "AIMBOT + ESP", "Works in almost all games", "Universal", "Execute", function() ExecuteScript(_U.AIM_UNIVERSAL) end)
-AddScriptButton(Universal, "INFINITE YIELD", "Universal script commands", "", "Execute", function() ExecuteScript(_U.IY) end)
-
--- [[ SETTINGS ]] --
-AddBasicButton(ConfigTab, "Full Bright", function() Lighting.Brightness = 2 Lighting.ClockTime = 14 Lighting.GlobalShadows = false end)
-AddBasicButton(ConfigTab, "Unlock FPS", function() if setfpscap then setfpscap(999) end end)
-AddBasicButton(ConfigTab, "Rejoin Server", function() game:GetService("TeleportService"):Teleport(game.PlaceId, Player) end)
-AddBasicButton(ConfigTab, "Anti-Afk", function() 
-    local VirtualUser = game:GetService("VirtualUser")
-    Player.Idled:Connect(function() VirtualUser:CaptureController() VirtualUser:ClickButton2(Vector2.new()) end)
+-- [[ WESTBOUND PAGE ]] --
+AddButton(WestBound, "TRXSH HUB", "Auto farm money", "Latest Version", "Execute", function() ExecuteScript(_U.WEST) end, "YOU NEED TO EXECUTE BEFORE SPAWNING. IF YOU ARE ALREADY SPAWNED REJOIN THE GAME AND EXECUTE THE SCRIPT IN THE LOADING SCREEN OR IN THE TEAM SELECTION SCREEN")
+AddButton(WestBound, "ESP NAME INFO", "See names through walls", "BY HENRIQSZ7", (getgenv().EspNameEnabled and "ON" or "OFF"), function(btn) 
+    getgenv().EspNameEnabled = not getgenv().EspNameEnabled
+    btn.Text = getgenv().EspNameEnabled and "ON" or "OFF"
 end)
-
-AddBasicButton(ConfigTab, "Auto Execute: " .. (Settings.AutoExecute and "ON" or "OFF"), function(btn)
-    Settings.AutoExecute = not Settings.AutoExecute
-    btn.Text = "Auto Execute: " .. (Settings.AutoExecute and "ON" or "OFF")
+AddButton(WestBound, "ESP BODY", "Highlight player bodies", "BY HENRIQSZ7", (getgenv().EspCorpoEnabled and "ON" or "OFF"), function(btn) 
+    getgenv().EspCorpoEnabled = not getgenv().EspCorpoEnabled
+    btn.Text = getgenv().EspCorpoEnabled and "ON" or "OFF"
 end)
-
-AddBasicButton(ConfigTab, "Change Hide Key (Bind)", function(btn)
-    btn.Text = "Press any key..."
-    local connection
-    connection = UserInputService.InputBegan:Connect(function(input)
+AddButton(WestBound, "AIMBOT (FIXED)", "Lock-on Body", "BY HENRIQSZ7", (getgenv().AimbotEnabled and "ON" or "OFF"), function(btn) 
+    getgenv().AimbotEnabled = not getgenv().AimbotEnabled
+    btn.Text = getgenv().AimbotEnabled and "ON" or "OFF"
+end)
+AddButton(WestBound, "AIMBOT KEYBIND", "Change Aimbot Key", "CURRENT: " .. getgenv().AimbotKey.Name, "Change", function(btn) 
+    btn.Text = "..."
+    local conn
+    conn = UserInputService.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Keyboard then
-            Settings.HideKey = input.KeyCode
-            btn.Text = "Hide Key: " .. input.KeyCode.Name
-            connection:Disconnect()
+            getgenv().AimbotKey = input.KeyCode
+            btn.Text = "SET!"
+            task.wait(1)
+            btn.Text = "Change"
+            conn:Disconnect()
         end
     end)
 end)
 
-AddBasicButton(ConfigTab, "Rainbow UI: " .. (Settings.RainbowUI and "ON" or "OFF"), function(btn)
+-- [[ UNIVERSAL PAGE ]] --
+AddButton(Universal, "AIMBOT + ESP", "Works in almost all games", "Universal", "Execute", function() ExecuteScript(_U.AIM_UNIVERSAL) end)
+AddButton(Universal, "INFINITE YIELD", "Universal script commands", "Admin", "Execute", function() ExecuteScript(_U.IY) end)
+
+-- [[ SETTINGS PAGE ]] --
+AddButton(ConfigTab, "FULL BRIGHT", "Make map brighter", "Visuals", "Enable", function() Lighting.Brightness = 2 Lighting.ClockTime = 14 Lighting.GlobalShadows = false end)
+AddButton(ConfigTab, "UNLOCK FPS", "Unlock 60 FPS limit", "Performance", "Execute", function() if setfpscap then setfpscap(999) end end)
+AddButton(ConfigTab, "AUTO EXECUTE", "Execute main script on start", "System", (Settings.AutoExecute and "ON" or "OFF"), function(btn) 
+    Settings.AutoExecute = not Settings.AutoExecute
+    btn.Text = Settings.AutoExecute and "ON" or "OFF"
+end)
+AddButton(ConfigTab, "RAINBOW UI", "Change UI colors constantly", "Visuals", (Settings.RainbowUI and "ON" or "OFF"), function(btn) 
     Settings.RainbowUI = not Settings.RainbowUI
-    btn.Text = "Rainbow UI: " .. (Settings.RainbowUI and "ON" or "OFF")
+    btn.Text = Settings.RainbowUI and "ON" or "OFF"
+end)
+AddButton(ConfigTab, "SHOW FPS", "Toggle FPS counter", "HUD", (Settings.ShowFps and "ON" or "OFF"), function(btn) 
+    Settings.ShowFps = not Settings.ShowFps
+    btn.Text = Settings.ShowFps and "ON" or "OFF"
+end)
+AddButton(ConfigTab, "HIDE KEYBIND", "Key to hide/show panel", "CURRENT: " .. Settings.HideKey.Name, "Bind", function(btn) 
+    btn.Text = "..."
+    local conn
+    conn = UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            Settings.HideKey = input.KeyCode
+            btn.Text = "SET!"
+            task.wait(1)
+            btn.Text = "Bind"
+            conn:Disconnect()
+        end
+    end)
+end)
+AddButton(ConfigTab, "REJOIN SERVER", "Reconnect to current game", "Utility", "Execute", function() game:GetService("TeleportService"):Teleport(game.PlaceId, Player) end)
+AddButton(ConfigTab, "ANTI-AFK", "Prevents kick for idling", "System", "Execute", function() 
+    local VirtualUser = game:GetService("VirtualUser")
+    Player.Idled:Connect(function() VirtualUser:CaptureController() VirtualUser:ClickButton2(Vector2.new()) end)
+end)
+AddButton(ConfigTab, "PERFORMANCE MODE", "Remove textures to boost FPS", "Performance", "Execute", function() 
+    for _, v in pairs(game:GetDescendants()) do if v:IsA("Texture") or v:IsA("Decal") then v:Destroy() end end
 end)
 
-AddBasicButton(ConfigTab, "Performance Mode (No Textures)", function()
-    for _, v in pairs(game:GetDescendants()) do
-        if v:IsA("Texture") or v:IsA("Decal") then v:Destroy() end
-    end
-end)
-
+-- [[ HUD ELEMENTS ]] --
 local FpsCounter = Instance.new("TextLabel", MainHub)
 FpsCounter.Size = UDim2.new(0, 100, 0, 20)
 FpsCounter.Position = UDim2.new(0, 195, 0, 10)
@@ -557,11 +548,7 @@ FpsCounter.TextSize = 12
 FpsCounter.TextXAlignment = Enum.TextXAlignment.Left
 FpsCounter.Visible = false
 
-AddBasicButton(ConfigTab, "Show FPS Counter", function()
-    FpsCounter.Visible = not FpsCounter.Visible
-end)
-
--- Loop FPS & Rainbow
+-- [[ MAIN LOOP (FPS & RAINBOW) ]] --
 task.spawn(function()
     local lastUpdate = tick()
     local frames = 0
@@ -572,6 +559,7 @@ task.spawn(function()
             frames = 0
             lastUpdate = tick()
         end
+        FpsCounter.Visible = Settings.ShowFps
         if Settings.RainbowUI then
             local hue = tick() % 5 / 5
             local color = Color3.fromHSV(hue, 0.8, 1)
@@ -587,15 +575,15 @@ task.spawn(function()
 end)
 
 -- [[ DISCORD ]] --
-AddScriptButton(DiscordTab, "TRXSH HUB COMMUNITY", "Join official community", "Get News", "Copy Link", function() if setclipboard then setclipboard(Settings.DiscordLink) end end)
+AddButton(DiscordTab, "TRXSH HUB COMMUNITY", "Join official Discord", "Get News", "Copy Link", function() if setclipboard then setclipboard(Settings.DiscordLink) end end)
 
--- [[ CREDITS ]] --
-AddScriptButton(CreditsTab, "PROJECT OWNER", "henriqsz7", "All UI/Logic", nil, nil)
-AddScriptButton(CreditsTab, "UI DESIGNER", "henriqsz7", "Modern Dark Theme", nil, nil)
-AddScriptButton(CreditsTab, "VERSION", "3.9.0", "Aimbot & ESP Fix", nil, nil)
-AddScriptButton(CreditsTab, "DEVELOPMENT STATUS", "Stable", "Optimized for performance", nil, nil)
+-- [[ CREDITS PAGE ]] --
+AddButton(CreditsTab, "PROJECT OWNER", "henriqsz7", "All UI/Logic", "", function() end)
+AddButton(CreditsTab, "UI DESIGNER", "henriqsz7", "Modern Dark Theme", "", function() end)
+AddButton(CreditsTab, "VERSION", "3.9.0", "Stable Build", "", function() end)
+AddButton(CreditsTab, "DEVELOPMENT STATUS", "Stable", "Optimized for performance", "", function() end)
 
--- [[ SISTEMA DE AUTH ]] --
+-- [[ AUTH SYSTEM ]] --
 local function Decode(t)
     local s = ""
     for _, b in ipairs(t) do s = s .. string.char(b) end
@@ -609,15 +597,21 @@ local function OpenHub()
     MainHub.Visible = true
     MainHub.Size = UDim2.new(0, 0, 0, 0)
     SmoothTween(MainHub, 0.5, {Size = UDim2.new(0, 700, 0, 450)})
-    if Settings.AutoExecute then
-        ExecuteScript(_U.WEST)
-    end
+    if Settings.AutoExecute then ExecuteScript(_U.WEST) end
 end
 
-task.spawn(function() if CurrentDeviceID == ADMIN_HWID then OpenHub() end end)
+task.spawn(function() 
+    if CurrentDeviceID ~= "" and CurrentDeviceID == ADMIN_HWID then 
+        OpenHub() 
+    end 
+end)
 
 AuthBtn.MouseButton1Click:Connect(function()
-    if KeyInput.Text == Decode(_V2) or KeyInput.Text == Decode(_V1) then OpenHub() else KeyInput.Text = "WRONG KEY!" end
+    if KeyInput.Text == Decode(_V2) or KeyInput.Text == Decode(_V1) then 
+        OpenHub() 
+    else 
+        KeyInput.Text = "WRONG KEY!" 
+    end
 end)
 
 GetKeyBtn.MouseButton1Click:Connect(function() if setclipboard then setclipboard("https://work.ink/24Qe/key") end end)
