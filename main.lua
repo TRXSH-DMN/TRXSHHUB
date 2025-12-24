@@ -1,5 +1,5 @@
--- [[ TRXSH HUB V3.9.0 - FINAL PERFORMANCE & FIXES ]] --
--- [[ CREATED BY HENRIQSZ7 ]] --
+
+-- CREATED BY HENRIQSZ7 
 
 local Player = game:GetService("Players").LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
