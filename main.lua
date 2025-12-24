@@ -57,13 +57,13 @@ local Settings = {
 -- [[ STATE VARIABLES ]] --
 getgenv().EspNameEnabled = false
 getgenv().EspCorpoEnabled = false
+getgenv().EspDistanceEnabled = false
 getgenv().AimbotEnabled = false
 getgenv().AimbotKey = Enum.KeyCode.E
 getgenv().AimbotFOV = 150
 getgenv().AimbotSmoothing = 0.15
 getgenv().NoRecoilEnabled = false
 getgenv().FastFireEnabled = false
-getgenv().FastReloadEnabled = false
 getgenv().FriendCheckEnabled = true
 
 local FOVCircle = Drawing.new("Circle")
@@ -128,12 +128,6 @@ local function IsValidTarget(targetPlr)
         return false
     end
     
-    if getgenv().FriendCheckEnabled then
-        local isFriend = false
-        pcall(function() isFriend = Player:IsFriendsWith(targetPlr.UserId) end)
-        if isFriend then return false end
-    end
-
     local passive = false
     if targetPlr.Character:FindFirstChild("Passive") then passive = true end
     if targetPlr:FindFirstChild("States") and targetPlr.States:FindFirstChild("Passive") and targetPlr.States.Passive.Value == true then passive = true end
@@ -142,38 +136,55 @@ local function IsValidTarget(targetPlr)
     return true
 end
 
--- [[ FIXED ESP LOGIC - NO FLICKERING ]] --
+local function CheckFriendStatus(targetPlr)
+    local isFriend = false
+    pcall(function() isFriend = Player:IsFriendsWith(targetPlr.UserId) end)
+    return isFriend
+end
+
+-- [[ UPDATED ESP LOGIC ]] --
 local function UpdateEsp()
     for _, plr in pairs(game.Players:GetPlayers()) do
         if plr ~= Player then
             local char = plr.Character
             if char and IsValidTarget(plr) then
-                -- ESP NAME --
+                local isFriend = CheckFriendStatus(plr)
+                local root = char:FindFirstChild("HumanoidRootPart")
+
                 if getgenv().EspNameEnabled then
                     local head = char:FindFirstChild("Head")
-                    if head and not char:FindFirstChild("TrxshName") then
-                        local billboard = Instance.new("BillboardGui")
-                        billboard.Name = "TrxshName"
-                        billboard.AlwaysOnTop = true
-                        billboard.Size = UDim2.new(0, 100, 0, 20)
-                        billboard.Adornee = head
-                        billboard.StudsOffset = Vector3.new(0, 3, 0)
-                        billboard.Parent = char
-                        local label = Instance.new("TextLabel")
-                        label.BackgroundTransparency = 1
-                        label.Size = UDim2.new(1, 0, 1, 0)
-                        label.Text = plr.Name
-                        label.Font = Enum.Font.GothamBold
-                        label.TextColor3 = Color3.fromRGB(255, 255, 255)
-                        label.TextSize = 12
-                        label.Parent = billboard
+                    if head then
+                        local billboard = char:FindFirstChild("TrxshName")
+                        if not billboard then
+                            billboard = Instance.new("BillboardGui")
+                            billboard.Name = "TrxshName"
+                            billboard.AlwaysOnTop = true
+                            billboard.Size = UDim2.new(0, 150, 0, 40)
+                            billboard.Adornee = head
+                            billboard.StudsOffset = Vector3.new(0, 3, 0)
+                            billboard.Parent = char
+                            local label = Instance.new("TextLabel")
+                            label.Name = "MainLabel"
+                            label.BackgroundTransparency = 1
+                            label.Size = UDim2.new(1, 0, 1, 0)
+                            label.Font = Enum.Font.GothamBold
+                            label.TextColor3 = isFriend and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 255, 255)
+                            label.TextSize = 12
+                            label.Parent = billboard
+                        end
+                        
+                        local distText = ""
+                        if getgenv().EspDistanceEnabled and root and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+                            local d = (root.Position - Player.Character.HumanoidRootPart.Position).Magnitude
+                            distText = "\n[" .. math.floor(d) .. "m]"
+                        end
+                        billboard.MainLabel.Text = plr.Name .. distText
                     end
                 else
                     if char:FindFirstChild("TrxshName") then char.TrxshName:Destroy() end
                 end
 
-                -- ESP BODY --
-                if getgenv().EspCorpoEnabled then
+                if getgenv().EspCorpoEnabled and not isFriend then
                     if not char:FindFirstChild("TrxshEspCorpo") then
                         local highlight = Instance.new("Highlight")
                         highlight.Name = "TrxshEspCorpo"
@@ -186,7 +197,6 @@ local function UpdateEsp()
                     if char:FindFirstChild("TrxshEspCorpo") then char.TrxshEspCorpo:Destroy() end
                 end
             else
-                -- CLEANUP IF INVALID OR FRIEND --
                 if char then
                     if char:FindFirstChild("TrxshName") then char.TrxshName:Destroy() end
                     if char:FindFirstChild("TrxshEspCorpo") then char.TrxshEspCorpo:Destroy() end
@@ -202,37 +212,40 @@ task.spawn(function()
     end
 end)
 
--- [[ REINFORCED GUN MODS - FAST RELOAD FIX ]] --
-RunService.Stepped:Connect(function()
-    pcall(function()
-        local tool = Player.Character and Player.Character:FindFirstChildOfClass("Tool")
-        if tool and tool:FindFirstChild("Stats") then
-            local s = tool.Stats
-            
-            if getgenv().NoRecoilEnabled then
-                if s:FindFirstChild("Recoil") then s.Recoil.Value = 0 end
-                if s:FindFirstChild("Spread") then s.Spread.Value = 0 end
-                if s:FindFirstChild("MaxSpread") then s.MaxSpread.Value = 0 end
-            end
-            
-            if getgenv().FastFireEnabled then
-                if s:FindFirstChild("FireRate") then s.FireRate.Value = 0 end
-                if s:FindFirstChild("Cooldown") then s.Cooldown.Value = 0 end
-                if tool:FindFirstChild("Configuration") and tool.Configuration:FindFirstChild("Automatic") then
-                    tool.Configuration.Automatic.Value = true
+-- [[ DEFINITIVE NO RECOIL & FAST FIRE LOGIC ]] --
+RunService.RenderStepped:Connect(function()
+    if getgenv().NoRecoilEnabled then
+        Camera.RotVelocity = Vector3.new(0,0,0)
+    end
+end)
+
+task.spawn(function()
+    while task.wait() do
+        pcall(function()
+            if not Player.Character then return end
+            local items = {}
+            for _, v in pairs(Player.Backpack:GetChildren()) do table.insert(items, v) end
+            for _, v in pairs(Player.Character:GetChildren()) do if v:IsA("Tool") then table.insert(items, v) end end
+
+            for _, tool in pairs(items) do
+                local stats = tool:FindFirstChild("Stats") or tool:FindFirstChild("Configuration")
+                if stats then
+                    if getgenv().NoRecoilEnabled then
+                        local recoil = stats:FindFirstChild("Recoil") or stats:FindFirstChild("RecoilPower")
+                        local spread = stats:FindFirstChild("Spread") or stats:FindFirstChild("MaxSpread") or stats:FindFirstChild("MinSpread")
+                        local shake = stats:FindFirstChild("Shake") or stats:FindFirstChild("CamShake")
+                        if recoil then recoil.Value = 0 end
+                        if spread then spread.Value = 0 end
+                        if shake then shake.Value = 0 end
+                    end
+                    if getgenv().FastFireEnabled then
+                        local firerate = stats:FindFirstChild("FireRate") or stats:FindFirstChild("Cooldown") or stats:FindFirstChild("Delay")
+                        if firerate then firerate.Value = 0 end
+                    end
                 end
             end
-            
-            if getgenv().FastReloadEnabled then
-                -- Westbound specific reload values --
-                if s:FindFirstChild("ReloadTime") then s.ReloadTime.Value = 0 end
-                if s:FindFirstChild("ReloadSpeed") then s.ReloadSpeed.Value = 100 end
-                if s:FindFirstChild("Reload") then s.Reload.Value = 0 end
-                -- Multi-bullet reload fix --
-                if s:FindFirstChild("BulletReload") then s.BulletReload.Value = false end
-            end
-        end
-    end)
+        end)
+    end
 end)
 
 -- [[ AIMBOT LOGIC ]] --
@@ -243,12 +256,14 @@ local function GetClosestPlayer()
 
     for _, v in pairs(game.Players:GetPlayers()) do
         if v ~= Player and IsValidTarget(v) and v.Character:FindFirstChild("HumanoidRootPart") then
-            local pos, onScreen = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
-            if onScreen then
-                local distance = (Vector2.new(pos.X, pos.Y) - mouseLocation).Magnitude
-                if distance < shortestDistance then
-                    closest = v
-                    shortestDistance = distance
+            if v.Character:FindFirstChild("TrxshEspCorpo") or (getgenv().EspNameEnabled and v.Character:FindFirstChild("Head")) then
+                local pos, onScreen = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+                if onScreen then
+                    local distance = (Vector2.new(pos.X, pos.Y) - mouseLocation).Magnitude
+                    if distance < shortestDistance then
+                        closest = v
+                        shortestDistance = distance
+                    end
                 end
             end
         end
@@ -384,7 +399,6 @@ Logo.Text = "TRXSH HUB"
 Logo.TextColor3 = Settings.AccentColor
 Logo.TextSize = 18
 
--- [[ USER INFO SECTION ]] --
 local UserInfoFrame = Instance.new("Frame")
 UserInfoFrame.Parent = SideMenu
 UserInfoFrame.BackgroundTransparency = 1
@@ -440,7 +454,6 @@ ContentArea.BackgroundTransparency = 1
 
 MakeDraggable(MainHub)
 
--- [[ COMPONENTS ]] --
 local function CreateTab(name, layoutOrder)
 	local TabBtn = Instance.new("TextButton")
 	TabBtn.Parent = TabList
@@ -566,6 +579,11 @@ local ConfigTab = CreateTab("SETTINGS", 99)
 local DiscordTab = CreateTab("DISCORD", 100)
 local CreditsTab = CreateTab("CREDITS", 101)
 
+ProjectSlayers.CanvasSize = UDim2.new(0,0,0,500)
+WestBound.CanvasSize = UDim2.new(0,0,0,1100)
+Universal.CanvasSize = UDim2.new(0,0,0,500)
+ConfigTab.CanvasSize = UDim2.new(0,0,0,1000)
+
 -- [[ SLAYERS PAGE ]] --
 AddButton(ProjectSlayers, "FROSTIES HUB", "Auto farm everything", "Needs Key", "Execute", function() ExecuteScript(_U.FROST) end)
 AddButton(ProjectSlayers, "CLOUD HUB", "Auto farm everything", "Needs Key", "Execute", function() ExecuteScript(_U.CLOUD) end)
@@ -573,31 +591,7 @@ AddButton(ProjectSlayers, "FIRE HUB", "Auto farm everything", "PATCHED", "Execut
 
 -- [[ WESTBOUND PAGE ]] --
 AddButton(WestBound, "TRXSH HUB", "Auto farm money", "Latest Version", "Execute", function() ExecuteScript(_U.WEST) end, "YOU NEED TO EXECUTE BEFORE SPAWNING. IF YOU ARE ALREADY SPAWNED REJOIN THE GAME AND EXECUTE THE SCRIPT IN THE LOADING SCREEN OR IN THE TEAM SELECTION SCREEN")
-AddButton(WestBound, "FRIEND CHECK", "Ignore only Roblox friends", "BY HENRIQSZ7", (getgenv().FriendCheckEnabled and "ON" or "OFF"), function(btn) 
-    getgenv().FriendCheckEnabled = not getgenv().FriendCheckEnabled
-    btn.Text = getgenv().FriendCheckEnabled and "ON" or "OFF"
-end)
-AddButton(WestBound, "FAST FIRE", "No cooldown shooting", "BY HENRIQSZ7", (getgenv().FastFireEnabled and "ON" or "OFF"), function(btn) 
-    getgenv().FastFireEnabled = not getgenv().FastFireEnabled
-    btn.Text = getgenv().FastFireEnabled and "ON" or "OFF"
-end)
-AddButton(WestBound, "FAST RELOAD", "Instant reload all guns", "BY HENRIQSZ7", (getgenv().FastReloadEnabled and "ON" or "OFF"), function(btn) 
-    getgenv().FastReloadEnabled = not getgenv().FastReloadEnabled
-    btn.Text = getgenv().FastReloadEnabled and "ON" or "OFF"
-end)
-AddButton(WestBound, "NO RECOIL", "Removes gun shake and spread", "BY HENRIQSZ7", (getgenv().NoRecoilEnabled and "ON" or "OFF"), function(btn) 
-    getgenv().NoRecoilEnabled = not getgenv().NoRecoilEnabled
-    btn.Text = getgenv().NoRecoilEnabled and "ON" or "OFF"
-end)
-AddButton(WestBound, "ESP NAME INFO", "See names through walls", "BY HENRIQSZ7", (getgenv().EspNameEnabled and "ON" or "OFF"), function(btn) 
-    getgenv().EspNameEnabled = not getgenv().EspNameEnabled
-    btn.Text = getgenv().EspNameEnabled and "ON" or "OFF"
-end)
-AddButton(WestBound, "ESP BODY", "Highlight player bodies", "BY HENRIQSZ7", (getgenv().EspCorpoEnabled and "ON" or "OFF"), function(btn) 
-    getgenv().EspCorpoEnabled = not getgenv().EspCorpoEnabled
-    btn.Text = getgenv().EspCorpoEnabled and "ON" or "OFF"
-end)
-AddButton(WestBound, "AIMBOT (FIXED)", "Lock-on Body", "BY HENRIQSZ7", (getgenv().AimbotEnabled and "ON" or "OFF"), function(btn) 
+AddButton(WestBound, "AIMBOT (FIXED)", "Lock-on Body", "DEFAULT KEY: E", (getgenv().AimbotEnabled and "ON" or "OFF"), function(btn) 
     getgenv().AimbotEnabled = not getgenv().AimbotEnabled
     btn.Text = getgenv().AimbotEnabled and "ON" or "OFF"
 end)
@@ -613,6 +607,30 @@ AddButton(WestBound, "AIMBOT KEYBIND", "Change Aimbot Key", "CURRENT: " .. getge
             conn:Disconnect()
         end
     end)
+end)
+AddButton(WestBound, "FRIEND CHECK", "Ignore only Roblox friends", "BY HENRIQSZ7", (getgenv().FriendCheckEnabled and "ON" or "OFF"), function(btn) 
+    getgenv().FriendCheckEnabled = not getgenv().FriendCheckEnabled
+    btn.Text = getgenv().FriendCheckEnabled and "ON" or "OFF"
+end)
+AddButton(WestBound, "FAST FIRE", "Instant shooting speed", "BY HENRIQSZ7", (getgenv().FastFireEnabled and "ON" or "OFF"), function(btn) 
+    getgenv().FastFireEnabled = not getgenv().FastFireEnabled
+    btn.Text = getgenv().FastFireEnabled and "ON" or "OFF"
+end)
+AddButton(WestBound, "NO RECOIL DEFINITIVE", "No shake, no spread, no lift", "BY HENRIQSZ7", (getgenv().NoRecoilEnabled and "ON" or "OFF"), function(btn) 
+    getgenv().NoRecoilEnabled = not getgenv().NoRecoilEnabled
+    btn.Text = getgenv().NoRecoilEnabled and "ON" or "OFF"
+end)
+AddButton(WestBound, "ESP NAME INFO", "See names through walls", "BY HENRIQSZ7", (getgenv().EspNameEnabled and "ON" or "OFF"), function(btn) 
+    getgenv().EspNameEnabled = not getgenv().EspNameEnabled
+    btn.Text = getgenv().EspNameEnabled and "ON" or "OFF"
+end)
+AddButton(WestBound, "ESP DISTANCE", "Show meters to target", "BY HENRIQSZ7", (getgenv().EspDistanceEnabled and "ON" or "OFF"), function(btn) 
+    getgenv().EspDistanceEnabled = not getgenv().EspDistanceEnabled
+    btn.Text = getgenv().EspDistanceEnabled and "ON" or "OFF"
+end)
+AddButton(WestBound, "ESP BODY", "Highlight player bodies", "BY HENRIQSZ7", (getgenv().EspCorpoEnabled and "ON" or "OFF"), function(btn) 
+    getgenv().EspCorpoEnabled = not getgenv().EspCorpoEnabled
+    btn.Text = getgenv().EspCorpoEnabled and "ON" or "OFF"
 end)
 
 -- [[ UNIVERSAL PAGE ]] --
@@ -657,7 +675,6 @@ AddButton(ConfigTab, "PERFORMANCE MODE", "Remove textures to boost FPS", "Perfor
     for _, v in pairs(game:GetDescendants()) do if v:IsA("Texture") or v:IsA("Decal") then v:Destroy() end end
 end)
 
--- [[ HUD ELEMENTS ]] --
 local FpsCounter = Instance.new("TextLabel", MainHub)
 FpsCounter.Size = UDim2.new(0, 100, 0, 20)
 FpsCounter.Position = UDim2.new(0, 195, 0, 10)
@@ -668,7 +685,6 @@ FpsCounter.TextSize = 12
 FpsCounter.TextXAlignment = Enum.TextXAlignment.Left
 FpsCounter.Visible = false
 
--- [[ MAIN LOOP (FPS & RAINBOW) ]] --
 task.spawn(function()
     local lastUpdate = tick()
     local frames = 0
@@ -694,16 +710,12 @@ task.spawn(function()
     end
 end)
 
--- [[ DISCORD ]] --
 AddButton(DiscordTab, "TRXSH HUB COMMUNITY", "Join official Discord", "Get News", "Copy Link", function() if setclipboard then setclipboard(Settings.DiscordLink) end end)
-
--- [[ CREDITS PAGE ]] --
 AddButton(CreditsTab, "PROJECT OWNER", "henriqsz7", "All UI/Logic", "", function() end)
 AddButton(CreditsTab, "UI DESIGNER", "henriqsz7", "Modern Dark Theme", "", function() end)
 AddButton(CreditsTab, "VERSION", "3.9.0", "Stable Build", "", function() end)
 AddButton(CreditsTab, "DEVELOPMENT STATUS", "Stable", "Optimized for performance", "", function() end)
 
--- [[ AUTH SYSTEM ]] --
 local function Decode(t)
     local s = ""
     for _, b in ipairs(t) do s = s .. string.char(b) end
