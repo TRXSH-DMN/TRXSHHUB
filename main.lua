@@ -1,5 +1,5 @@
-
--- CREATED BY HENRIQSZ7 
+-- [[ TRXSH HUB V3.9.0 - FINAL PERFORMANCE & FIXES ]] --
+-- [[ CREATED BY HENRIQSZ7 ]] --
 
 local Player = game:GetService("Players").LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
@@ -149,7 +149,7 @@ local function UpdateEsp()
             local char = plr.Character
             if char and IsValidTarget(plr) then
                 local isFriend = CheckFriendStatus(plr)
-                local root = char:FindFirstChild("HumanoidRootPart")
+                local targetRoot = char:FindFirstChild("HumanoidRootPart")
 
                 if getgenv().EspNameEnabled then
                     local head = char:FindFirstChild("Head")
@@ -174,8 +174,9 @@ local function UpdateEsp()
                         end
                         
                         local distText = ""
-                        if getgenv().EspDistanceEnabled and root and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
-                            local d = (root.Position - Player.Character.HumanoidRootPart.Position).Magnitude
+                        if getgenv().EspDistanceEnabled and targetRoot and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+                            local myRoot = Player.Character.HumanoidRootPart
+                            local d = (targetRoot.Position - myRoot.Position).Magnitude
                             distText = "\n[" .. math.floor(d) .. "m]"
                         end
                         billboard.MainLabel.Text = plr.Name .. distText
@@ -716,6 +717,7 @@ AddButton(CreditsTab, "UI DESIGNER", "henriqsz7", "Modern Dark Theme", "", funct
 AddButton(CreditsTab, "VERSION", "3.9.0", "Stable Build", "", function() end)
 AddButton(CreditsTab, "DEVELOPMENT STATUS", "Stable", "Optimized for performance", "", function() end)
 
+-- [[ AUTH SYSTEM ]] --
 local function Decode(t)
     local s = ""
     for _, b in ipairs(t) do s = s .. string.char(b) end
@@ -733,13 +735,7 @@ local function OpenHub()
     if Settings.AutoExecute then ExecuteScript(_U.WEST) end
 end
 
-KeyInput:GetPropertyChangedSignal("Text"):Connect(function()
-    local input = KeyInput.Text
-    if input == Decode(_V2) or input == Decode(_V1) or input == KEY_DIA then
-        OpenHub()
-    end
-end)
-
+-- Removido verificação automática ao digitar para corrigir o painel que não sumia
 task.spawn(function() 
     if CurrentDeviceID ~= "" and CurrentDeviceID == ADMIN_HWID then 
         OpenHub() 
@@ -747,7 +743,8 @@ task.spawn(function()
 end)
 
 AuthBtn.MouseButton1Click:Connect(function()
-    if KeyInput.Text == Decode(_V2) or KeyInput.Text == Decode(_V1) or KeyInput.Text == KEY_DIA then 
+    local input = KeyInput.Text
+    if input == Decode(_V2) or input == Decode(_V1) or input == KEY_DIA then 
         OpenHub() 
     else 
         KeyInput.Text = "WRONG KEY!" 
